@@ -1,0 +1,4 @@
+name = DB Image Field
+description = An implementation of a DB Image field
+package = NURUN modules
+core = 7.x

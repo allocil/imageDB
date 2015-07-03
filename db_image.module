@@ -1,0 +1,298 @@
+<?php
+
+function db_image_field_info() {
+    return array(
+        // We name our field as the associative name of the array.
+        'db_image_rgb' => array(
+            'label' => t('DBImage'),
+            'description' => t('Experimental DBImage.'),
+            'default_widget' => 'db_image_text',
+            'default_formatter' => 'db_image_simple_text',
+        ),
+    );
+}
+
+function db_image_field_validate($entity_type, $entity, $field, $instance, $langcode, $items, &$errors) {
+    /* foreach ($items as $delta => $item) {
+      if (!empty($item['rgb'])) {
+      //if (!preg_match('@^#[0-9a-f]{6}$@', $item['rgb'])) {
+      if (!preg_match('@^[0-9]{6}$@', $item['rgb'])) {
+      $errors[$field['field_name']][$langcode][$delta][] = array(
+      'error' => 'db_image_invalid',
+      'message' => t('REMUS code must be numeric and 6 digits.'),
+      );
+      }
+      }
+      } */
+}
+
+function db_image_field_is_empty($item, $field) {
+    return empty($item['rgb']);
+}
+
+function db_image_field_formatter_info() {
+    return array(
+        // This formatter just displays the hex value in the color indicated.
+        'db_image_simple_text' => array(
+            'label' => t('Simple asset uploader'),
+            'field types' => array('db_image_rgb'),
+        ),
+            /* // This formatter changes the background color of the content region.
+              'db_image_color_background' => array(
+              'label' => t('Simple asset uploader'),
+              'field types' => array('db_image_rgb'),
+              ), */
+    );
+}
+
+function db_image_field_formatter_view($entity_type, $entity, $field, $instance, $langcode, $items, $display) {
+    global $base_url;
+    $path = drupal_get_path("module", "db_image");
+    $element = array();
+    switch ($display['type']) {
+        case 'db_image_simple_text':
+            foreach ($items as $delta => $item) {
+
+                $matches = array();
+                $pattern = '#data:(.*?)/#';
+                preg_match($pattern, $item['rgb'], $matches);
+                $mimetype = $matches[1];
+                if ($mimetype == 'image') {
+                    $element[$delta] = array(
+                        '#type' => 'html_tag',
+                        '#tag' => 'img',
+                        '#attributes' => array(
+                            'src' => "$base_url/dbimage/image?nid={$entity->nid}&field={$field['field_name']}&delta=$delta", //$item['rgb'],                        
+                        ),
+                        '#value' => ""//"<a target='_blank' href=$base_url/dbimage/image?nid={$entity->nid}&field={$field['field_name']}&delta=$delta >File</a>",
+                    );
+                } else {
+                    $element[$delta] = array(
+                        '#type' => 'html_tag',
+                        '#tag' => 'div',
+                        '#value' => "<a target='_blank' href=$base_url/dbimage/image?nid={$entity->nid}&field={$field['field_name']}&delta=$delta >File</a>",
+                    );
+                }
+
+                /* $element[$delta] = array(
+                  '#type' => 'html_tag',
+                  '#tag' => $mimetype=='image'? 'img':'a',
+                  '#attributes' => array(
+                  'src' => $item['rgb'],
+                  'href' => $item['rgb'],
+                  'target' => '_blank'
+                  ),
+                  '#value' => "<a target='_blank' href=$base_url/dbimage/image?nid={$entity->nid}&field={$field['field_name']}&delta=$delta >File</a>",
+                  ); */
+            }
+            break;
+    }
+    return $element;
+}
+
+function db_image_field_widget_info() {
+    return array(
+        'db_image_text' => array(
+            'label' => t('DBImage uploader'),
+            'field types' => array('db_image_rgb'),
+        ),
+        'db_image_file' => array(
+            'label' => t('DBImage file uploader'),
+            'field types' => array('db_image_rgb'),
+        )
+    );
+}
+
+function db_image_field_widget_form(&$form, &$form_state, $field, $instance, $langcode, $items, $delta, $element) {
+    global $base_url;
+    drupal_add_js(array('db_image' => array('basepath' => "$base_url/sites/all/modules/db_image")), 'setting');
+    $path = drupal_get_path("module", "db_image");
+    $value = isset($items[$delta]['rgb']) ? $items[$delta]['rgb'] : '';
+    $widget = $element;
+    $widget['#delta'] = $delta;
+    switch ($instance['widget']['type']) {
+        case 'db_image_text':
+            $id = "txt-" . uniqid();
+            $widget += array(
+                '#type' => 'hidden',
+                '#default_value' => $value,
+                '#attributes' => array(
+                    'data-id' => $id,
+                ),
+                '#attached' => array(
+                    'css' => array(drupal_get_path('module', 'db_image') . '/js/fancy/jquery.fancybox.css',),
+                    'js' => array(
+                        drupal_get_path('module', 'db_image') . '/js/fancy/jquery.fancybox.js',
+                        drupal_get_path('module', 'db_image') . '/js/popup.js'
+                    ),
+                )
+            );
+            $imageUrl = "$base_url/$path/img/default.jpg";
+            if (strlen($value) < 50)
+                $value = $imageUrl;
+
+            $image = "<div><img src='$value' height='100px'></div>";
+//print_r($instance);
+            $widget["#prefix"] = "<div class='dbimage' style='border: 1px solid #ccc; padding: 15px;margin-top:15px;'>";
+            $widget["#suffix"] = "$image<div><label>{$instance['label']}</label><a data-fancybox-type='iframe' href='$base_url/dbimage/popup?id=$id' class='fancybox remus-add'>Add/Change Image</a><a data-id='$id' class='remove-it' href='#' style='margin-left:25px;'>Remove Image</a></div></div>";
+            break;
+        case 'db_image_file':
+            $id = "txt-" . uniqid();
+            $widget += array(
+                '#type' => 'hidden',
+                '#default_value' => $value,
+                '#attributes' => array(
+                    'data-id' => $id,
+                ),
+                '#attached' => array(
+                    'css' => array(drupal_get_path('module', 'db_image') . '/js/fancy/jquery.fancybox.css',),
+                    'js' => array(
+                        drupal_get_path('module', 'db_image') . '/js/fancy/jquery.fancybox.js',
+                        drupal_get_path('module', 'db_image') . '/js/popup.js'
+                    ),
+                )
+            );
+            $display = "";
+            if (strlen($value) < 50) {
+                $display = "display:none";
+            }
+            $file = "<div><a class='afile' style='$display' href='$value' target='_blank'>File</a></div>";
+
+            $widget["#prefix"] = "<div class='dbimagefile' style='border: 1px solid #ccc; padding: 15px;margin-top:15px;'>";
+            $widget["#suffix"] = "$file<div><label>{$instance['label']} File</label><a data-fancybox-type='iframe' href='$base_url/dbimage/popupfile?id=$id' class='fancybox remus-add'>Add/Change File</a><a data-id='$id' class='remove-it-file' href='#' style='margin-left:25px;'>Remove File</a></div></div>";
+            break;
+    }
+    $element['rgb'] = $widget;
+    return $element;
+}
+
+/*
+  function db_image_3text_validate($element, &$form_state) {
+  // @todo: Isn't there a better way to find out which element?
+  $delta = $element['#delta'];
+  $field = $form_state['field'][$element['#field_name']][$element['#language']]['field'];
+  $field_name = $field['field_name'];
+  if (isset($form_state['values'][$field_name][$element['#language']][$delta]['rgb'])) {
+  $values = $form_state['values'][$field_name][$element['#language']][$delta]['rgb'];
+  foreach (array('r', 'g', 'b') as $colorfield) {
+  $colorfield_value = hexdec($values[$colorfield]);
+  // If they left any empty, we'll set the value empty and quit.
+  if (strlen($values[$colorfield]) == 0) {
+  form_set_value($element, '', $form_state);
+  return;
+  }
+  // If they gave us anything that's not hex, reject it.
+  if ((strlen($values[$colorfield]) != 2) || $colorfield_value < 0 || $colorfield_value > 255) {
+  form_error($element[$colorfield], t("Saturation value must be a 2-digit hexadecimal value between 00 and ff."));
+  }
+  }
+  $value = sprintf('#%02s%02s%02s', $values['r'], $values['g'], $values['b']);
+  form_set_value($element, $value, $form_state);
+  }
+  }
+ */
+
+function db_image_field_widget_error($element, $error, $form, &$form_state) {
+    switch ($error['error']) {
+        case 'db_image_invalid':
+            form_error($element, $error['message']);
+            break;
+    }
+}
+
+function db_image_menu() {
+    $items = array();
+    $items['dbimage/popup'] = array(
+        'title' => t(''),
+        'description' => t(''),
+        'page callback' => 'dbimage_popup_display',
+        'access callback' => TRUE,
+        'type' => MENU_NORMAL_ITEM);
+    $items['dbimage/popupfile'] = array(
+        'title' => t(''),
+        'description' => t(''),
+        'page callback' => 'dbimage_popupfile_display',
+        'access callback' => TRUE,
+        'type' => MENU_NORMAL_ITEM);
+    $items['dbimage/image'] = array(
+        'title' => 'Disney Media Plus',
+        'description' => 'Image',
+        'page callback' => 'dbimage_module_image',
+        'access callback' => TRUE,
+        'type' => MENU_CALLBACK);
+    return $items;
+}
+
+function db_image_theme() {
+    return array(
+        'popupdbimage' => array('variables' => array(), 'template' => 'popup'),
+        'popupdbimagefile' => array('variables' => array(), 'template' => 'popupfile'),
+    );
+}
+
+function dbimage_popup_display() {
+    $output = theme('popupdbimage', array("type" => "image"));
+    return $output;
+}
+
+function dbimage_popupfile_display() {
+    $output = theme('popupdbimagefile', array("type" => "file"));
+    return $output;
+}
+
+function dbimage_module_image() {
+    $nid = 93;
+    $field = "field_imagen_promo";
+    $delta = 0;
+    if (isset($_GET["nid"])) {
+        $nid = $_GET["nid"];
+        if (isset($_GET["field"])) {
+            $field = $_GET["field"];
+            if (isset($_GET["delta"])) {
+                $delta = $_GET["delta"];
+                $node = node_load($nid);
+                $field = field_get_items("node", $node, "$field");
+
+                $data = $field[$delta]["rgb"];
+                //print($data);
+
+                $matches = array();
+                $pattern = '#data:(.*?);base64#';
+                preg_match($pattern, $data, $matches);
+                $mimetype = "image/jpeg";
+                if (isset($matches[1]))
+                    $mimetype = $matches[1];
+
+                //$img = str_replace('data:image/jpeg;base64,', '', $data);                
+                $img = str_replace("data:$mimetype;base64,", "", $data);
+                $data = base64_decode($img);
+
+
+
+                drupal_add_http_header('Content-Type', $mimetype);
+                print($data);
+            }
+        }
+    } else {
+        //print(arg(0) . "/" . arg(1) . "/" . arg(2) . "/" . arg(3) . "/" . arg(4));
+        $nid = arg(2);
+        $field = arg(3);
+        $delta = arg(4);
+        $node = node_load($nid);
+        $field = field_get_items("node", $node, "$field");
+        $data = $field[$delta]["rgb"];
+        $matches = array();
+        $pattern = '#data:(.*?);base64#';
+        preg_match($pattern, $data, $matches);
+        $mimetype = "image/jpeg";
+        if (isset($matches[1]))
+            $mimetype = $matches[1];
+
+        //$img = str_replace('data:image/jpeg;base64,', '', $data);                
+        $img = str_replace("data:$mimetype;base64,", "", $data);
+        $data = base64_decode($img);
+
+        drupal_add_http_header('Content-Type', $mimetype);
+        print($data);
+    }
+}
