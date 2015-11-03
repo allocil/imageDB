@@ -62,7 +62,8 @@ function db_image_field_formatter_view($entity_type, $entity, $field, $instance,
                         '#type' => 'html_tag',
                         '#tag' => 'img',
                         '#attributes' => array(
-                            'src' => "$base_url/dbimage/image?nid={$entity->nid}&field={$field['field_name']}&delta=$delta", //$item['rgb'],                        
+                            //'src' => "$base_url/dbimage/image?nid={$entity->nid}&field={$field['field_name']}&delta=$delta", //$item['rgb'],                     
+							'src' => "$base_url/dbimage/image/{$entity->nid}/{$field['field_name']}/$delta",   
                         ),
                         '#value' => ""//"<a target='_blank' href=$base_url/dbimage/image?nid={$entity->nid}&field={$field['field_name']}&delta=$delta >File</a>",
                     );
@@ -70,7 +71,8 @@ function db_image_field_formatter_view($entity_type, $entity, $field, $instance,
                     $element[$delta] = array(
                         '#type' => 'html_tag',
                         '#tag' => 'div',
-                        '#value' => "<a target='_blank' href=$base_url/dbimage/image?nid={$entity->nid}&field={$field['field_name']}&delta=$delta >File</a>",
+                        //'#value' => "<a target='_blank' href=$base_url/dbimage/image?nid={$entity->nid}&field={$field['field_name']}&delta=$delta >File</a>",
+						'#value' => "<a target='_blank' href=$base_url/dbimage/image/{$entity->nid}/{$field['field_name']}/$delta >File</a>",
                     );
                 }
 
@@ -108,6 +110,12 @@ function db_image_field_widget_form(&$form, &$form_state, $field, $instance, $la
     drupal_add_js(array('db_image' => array('basepath' => "$base_url/sites/all/modules/db_image")), 'setting');
     $path = drupal_get_path("module", "db_image");
     $value = isset($items[$delta]['rgb']) ? $items[$delta]['rgb'] : '';
+	$nid = arg(1);
+	$field = $field["field_name"];
+	$imageUrl = "$base_url/dbimage/image/$nid/$field/$delta";
+	$hiddenValue = "noload";
+	if (strlen($value)< 50)
+		$hiddenValue = '';
     $widget = $element;
     $widget['#delta'] = $delta;
     switch ($instance['widget']['type']) {
@@ -115,7 +123,7 @@ function db_image_field_widget_form(&$form, &$form_state, $field, $instance, $la
             $id = "txt-" . uniqid();
             $widget += array(
                 '#type' => 'hidden',
-                '#default_value' => $value,
+                '#default_value' => $hiddenValue,
                 '#attributes' => array(
                     'data-id' => $id,
                 ),
@@ -127,20 +135,20 @@ function db_image_field_widget_form(&$form, &$form_state, $field, $instance, $la
                     ),
                 )
             );
-            $imageUrl = "$base_url/$path/img/default.jpg";
+			
+			
             if (strlen($value) < 50)
-                $value = $imageUrl;
-
-            $image = "<div><img src='$value' height='100px'></div>";
+                $imageUrl = "$base_url/$path/img/default.jpg";
+            $image = "<div><img src='$imageUrl' height='100px'></div>";
 //print_r($instance);
-            $widget["#prefix"] = "<div class='dbimage' style='border: 1px solid #ccc; padding: 15px;margin-top:15px;'>";
-            $widget["#suffix"] = "$image<div><label>{$instance['label']}</label><a data-fancybox-type='iframe' href='$base_url/dbimage/popup?id=$id' class='fancybox remus-add'>Add/Change Image</a><a data-id='$id' class='remove-it' href='#' style='margin-left:25px;'>Remove Image</a></div></div>";
+            $widget["#prefix"] = "<div class='dbimage' style='border: 1px solid #ccc; padding: 15px;margin-top:15px;'>";			
+	$widget["#suffix"] = "$image<div><label>{$instance['label']}</label><a data-fancybox-type='iframe' href='$base_url/dbimage/popup?nid={$nid}&field={$field}&delta={$delta}&id=$id' class='fancybox remus-add'>Add/Change Image</a><a data-id='$id' class='remove-it' href='#' style='margin-left:25px;'>Remove Image</a></div></div>";
             break;
         case 'db_image_file':
             $id = "txt-" . uniqid();
             $widget += array(
                 '#type' => 'hidden',
-                '#default_value' => $value,
+                '#default_value' => $hiddenValue,
                 '#attributes' => array(
                     'data-id' => $id,
                 ),
@@ -156,10 +164,10 @@ function db_image_field_widget_form(&$form, &$form_state, $field, $instance, $la
             if (strlen($value) < 50) {
                 $display = "display:none";
             }
-            $file = "<div><a class='afile' style='$display' href='$value' target='_blank'>File</a></div>";
+            $file = "<div><a class='afile' style='$display' href='$imageUrl' target='_blank'>File</a></div>";
 
             $widget["#prefix"] = "<div class='dbimagefile' style='border: 1px solid #ccc; padding: 15px;margin-top:15px;'>";
-            $widget["#suffix"] = "$file<div><label>{$instance['label']} File</label><a data-fancybox-type='iframe' href='$base_url/dbimage/popupfile?id=$id' class='fancybox remus-add'>Add/Change File</a><a data-id='$id' class='remove-it-file' href='#' style='margin-left:25px;'>Remove File</a></div></div>";
+            $widget["#suffix"] = "$file<div><label>{$instance['label']} File</label><a data-fancybox-type='iframe' href='$base_url/dbimage/popupfile?nid={$nid}&field={$field}&delta={$delta}&id=$id' class='fancybox remus-add'>Add/Change File</a><a data-id='$id' class='remove-it-file' href='#' style='margin-left:25px;'>Remove File</a></div></div>";
             break;
     }
     $element['rgb'] = $widget;
@@ -239,6 +247,36 @@ function dbimage_popupfile_display() {
     $output = theme('popupdbimagefile', array("type" => "file"));
     return $output;
 }
+
+function db_image_node_presave($node){		
+	print("BEGIN");
+	$fields = field_info_instances("node", $node->type);	
+	print("1");
+	foreach ($fields as $key => $value) {				
+	print("2");
+	print($value["widget"]["type"]);
+		if ($value["widget"]["type"] == "db_image_text" || $value["widget"]["type"] == "db_image_file"){
+		print("3");
+		print($key);
+		print_r($node->{$key});
+			foreach( $node->{$key} as $lang => $value2){
+				print("4");
+				foreach( $value2 as $delta => $value3){
+					print("5");
+					print_r($value3);
+					if ($value3["rgb"] == "noload" ){
+						print("6");
+						$node->{$key}[$lang][$delta]["rgb"] = $node->original->{$key}[$lang][$delta]["rgb"];
+					}
+				}
+			}
+		}		
+	}
+	print("END");
+	//return $node;
+	//die();
+}
+
 
 function dbimage_module_image() {
     $nid = 93;

@@ -11,7 +11,7 @@ window.getImages = function (i) {
 jQuery(document).ready(function () {    
    
     jQuery(".remus-add").fancybox({
-        maxWidth: 800,
+        maxWidth: 750,
         maxHeight: 650,
         fitToView: false,
         width: "70%",
@@ -23,12 +23,12 @@ jQuery(document).ready(function () {
     });
     
     jQuery.each( jQuery(".dbimage"), function(){        
-        if (jQuery(this).find("input[type=hidden]").val() != "") 
+        if (jQuery(this).find("input[type=hidden]").val() != "" && jQuery(this).find("input[type=hidden]").val() != "noload") 
             jQuery(this).find("img").attr("src",jQuery(this).find("input[type=hidden]").val());
     });
     
     jQuery.each( jQuery(".dbimagefile"), function(){        
-        if (jQuery(this).find("input[type=hidden]").val() != "") 
+        if (jQuery(this).find("input[type=hidden]").val() != "" && jQuery(this).find("input[type=hidden]").val() != "noload") 
             jQuery(this).find(".afile").attr("href",jQuery(this).find("input[type=hidden]").val());
     });
     

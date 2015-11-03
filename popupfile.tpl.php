@@ -30,11 +30,27 @@ $options = array('absolute' => FALSE);
     </form>
     <link href="<?php print $base_url; ?>/<?php print $path; ?>/bootstrap/css/bootstrap.min.css" rel="stylesheet">    
     <script>
+		var imageDB = '';
+		<?php 
+			if ($_REQUEST["nid"] !== "add"){
+				$nid = $_REQUEST["nid"];
+				$field = $_REQUEST["field"];
+				$delta = $_REQUEST["delta"];
+				$node = node_load($nid);
+                $field = field_get_items("node", $node, "$field");
+                $data = $field[$delta]["rgb"];
+		?>			
+			imageDB = '<?php print $data; ?>';
+		<?php	} ?>	
         var id = '<?php print $_REQUEST["id"]; ?>';
 
         jQuery(document).ready(function () {
             var copy;
-            var image = jQuery('input[data-id=' + id + ']', window.parent.document).val();
+			var image ='';
+			if (imageDB.length > 0)
+				image = imageDB;
+			else
+				image = jQuery('input[data-id=' + id + ']', window.parent.document).val();
             if (image != "") {
                 jQuery("#filepreview").attr("href", image);
             }
