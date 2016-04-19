@@ -5,7 +5,7 @@ This module should be useless to many developers, but in certain scenarios where
 
 You can access an  image using an URL like:
 
-http://<site-path>/dbimage/image/<node-nid>/<field-name>/<index-of-image>/<beautiful-image-name>
+http://[site-path]/dbimage/image/[node-nid]/[field-name]/[index-of-image]/[beautiful-image-name]
 
 as:
 
